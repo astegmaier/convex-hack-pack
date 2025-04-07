@@ -8,13 +8,22 @@ import { api } from "./_generated/api";
 // You can read data from the database via a query function:
 export const listIdeas = query({
   // Validators for arguments.
-  args: {},
+  args: {
+    includeRandom: v.boolean(),
+  },
 
   // Query function implementation.
   handler: async (ctx, args) => {
     // Read the database as many times as you need here.
     // See https://docs.convex.dev/database/reading-data.
-    return await ctx.db.query("ideas").collect();
+    if (args.includeRandom) {
+      return await ctx.db.query("ideas").collect();
+    } else {
+      return await ctx.db
+        .query("ideas")
+        .filter((q) => q.neq(q.field("random"), true))
+        .collect();
+    }
   },
 });
 
@@ -24,6 +33,7 @@ export const saveIdea = mutation({
   args: {
     idea: v.string(),
     random: v.boolean(),
+    categories: v.optional(v.string()),
   },
 
   // Mutation function implementation.
@@ -56,6 +66,7 @@ export const fetchRandomIdea = action({
     await ctx.runMutation(api.myFunctions.saveIdea, {
       idea: idea.trim(),
       random: true,
+      categories: "generated",
     });
 
     // Optionally, return a value from your action

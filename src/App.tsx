@@ -8,22 +8,26 @@ import { Label } from "@/components/ui/label";
 
 function App() {
   const [newIdea, setNewIdea] = useState("");
+  const [newCategories, setNewCategories] = useState("");
   const [includeRandom, setIncludeRandom] = useState(true);
 
-  const ideas = useQuery(api.myFunctions.listIdeas);
+  const ideas = useQuery(api.myFunctions.listIdeas, { includeRandom });
   const saveIdea = useMutation(api.myFunctions.saveIdea).withOptimisticUpdate(
     (localStore, args) => {
-      const { idea } = args;
-      const currentIdeas = localStore.getQuery(api.myFunctions.listIdeas) ?? [];
-      localStore.setQuery(api.myFunctions.listIdeas, {}, [
+      const { idea, categories } = args;
+      const currentIdeas = localStore.getQuery(api.myFunctions.listIdeas, { includeRandom }) ?? [];
+      localStore.setQuery(api.myFunctions.listIdeas, { includeRandom }, [
         ...currentIdeas,
         {
           _id: crypto.randomUUID(),
           _creationTime: Date.now(),
-          idea
+          idea,
+          categories,
+          random: false
         },
       ]);
-      setNewIdea("")
+      setNewIdea("");
+      setNewCategories("");
     }
   );
   const generateIdea = useAction(api.myFunctions.fetchRandomIdea);
@@ -37,30 +41,45 @@ function App() {
 
         <h2 className="text-center">Let's brainstorm apps to build!</h2>
 
-        <form className="flex gap-2">
-          <Input
-            type="text"
-            value={newIdea}
-            onChange={(event) => setNewIdea(event.target.value)}
-            placeholder="Type your app idea here"
-          />
-          <Button
-            type="submit"
-            disabled={!newIdea}
-            title={
-              newIdea
-                ? "Save your idea to the database"
-                : "You must enter an idea first"
-            }
-            onClick={async (e) => {
-              e.preventDefault();
-              await saveIdea({ idea: newIdea.trim(), random: false });
-              setNewIdea("");
-            }}
-            className="min-w-fit"
-          >
-            Save idea
-          </Button>
+        <form className="flex flex-col gap-4">
+          <div className="flex gap-2">
+            <Input
+              type="text"
+              value={newIdea}
+              onChange={(event) => setNewIdea(event.target.value)}
+              placeholder="Type your app idea here"
+            />
+            <Button
+              type="submit"
+              disabled={!newIdea}
+              title={
+                newIdea
+                  ? "Save your idea to the database"
+                  : "You must enter an idea first"
+              }
+              onClick={async (e) => {
+                e.preventDefault();
+                await saveIdea({ 
+                  idea: newIdea.trim(), 
+                  random: false,
+                  categories: newCategories.trim() || undefined
+                });
+                setNewIdea("");
+                setNewCategories("");
+              }}
+              className="min-w-fit"
+            >
+              Save idea
+            </Button>
+          </div>
+          <div className="flex gap-2">
+            <Input
+              type="text"
+              value={newCategories}
+              onChange={(event) => setNewCategories(event.target.value)}
+              placeholder="Categories (comma separated)"
+            />
+          </div>
         </form>
 
         <div className="flex justify-between items-center">
@@ -75,7 +94,6 @@ function App() {
 
           <div
             className="flex gap-2"
-            title="Uh oh, this checkbox doesn't work! Until we fix it ;)"
           >
             <Checkbox
               id="show-random"
@@ -84,19 +102,21 @@ function App() {
             />
             <Label htmlFor="show-random">
               Include random ideas
-              <br />
-              <span className="text-[16px] font-mono">
-                [TODO: see exercise in README]
-              </span>
             </Label>
           </div>
         </div>
 
-        <ul>
+        <ul className="space-y-2">
           {ideas?.map((document, i) => (
-            <li key={i}>
-              {document.random ? "🤖 " : "💡 "}
-              {document.idea}
+            <li key={i} className="p-2 border border-border rounded-md">
+              <div>
+                <span className="font-bold">{document.random ? "🤖 " : "💡 "}{document.idea}</span>
+              </div>
+              {document.categories && (
+                <div className="mt-1 text-sm text-muted-foreground">
+                  Categories: {document.categories}
+                </div>
+              )}
             </li>
           ))}
         </ul>
