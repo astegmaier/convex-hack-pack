@@ -11,7 +11,21 @@ function App() {
   const [includeRandom, setIncludeRandom] = useState(true);
 
   const ideas = useQuery(api.myFunctions.listIdeas);
-  const saveIdea = useMutation(api.myFunctions.saveIdea);
+  const saveIdea = useMutation(api.myFunctions.saveIdea).withOptimisticUpdate(
+    (localStore, args) => {
+      const { idea } = args;
+      const currentIdeas = localStore.getQuery(api.myFunctions.listIdeas) ?? [];
+      localStore.setQuery(api.myFunctions.listIdeas, {}, [
+        ...currentIdeas,
+        {
+          _id: crypto.randomUUID(),
+          _creationTime: Date.now(),
+          idea
+        },
+      ]);
+      setNewIdea("")
+    }
+  );
   const generateIdea = useAction(api.myFunctions.fetchRandomIdea);
 
   return (
